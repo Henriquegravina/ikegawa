@@ -9,6 +9,8 @@ documentado no manual Yokogawa `IM92015-02E`).
 Escrito em Go + [Fyne](https://fyne.io). Funciona em Linux, Windows e macOS.
 A própria interface tem um seletor de idioma (Português/English) embutido.
 
+![Aba Ao Vivo do IkeGawa mostrando uma leitura de tensão DC ao vivo, com gráfico e contador de taxa](docs/screenshot.png)
+
 ## Funcionalidades
 
 - **Ao Vivo**: seleciona a porta serial, conecta e já começa a ler sozinho

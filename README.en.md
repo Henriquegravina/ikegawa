@@ -9,6 +9,8 @@ documented in the Yokogawa manual `IM92015-02E`).
 Written in Go + [Fyne](https://fyne.io). Runs on Linux, Windows and macOS.
 The interface itself has a language switcher (Português/English) built in.
 
+![IkeGawa's Live tab showing a live DC voltage reading, chart and rate counter](docs/screenshot.png)
+
 ## Features
 
 - **Live**: pick the serial port, connect, and it starts reading right away
