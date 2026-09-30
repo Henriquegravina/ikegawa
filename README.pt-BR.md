@@ -66,6 +66,13 @@ projeto (Mercado Livre):
 Python (pyserial) para bisbilhotar o protocolo bruto do instrumento direto no
 terminal, sem precisar compilar nada.
 
+## Download
+
+Binários prontos para Linux e Windows ficam anexados em cada
+**[release](https://github.com/Henriquegravina/ikegawa/releases/latest)** —
+não precisa compilar nada. macOS não tem binário pronto (veja
+[Compilando](#compilando) mais abaixo pra entender o motivo).
+
 ## Rodando
 
 ```

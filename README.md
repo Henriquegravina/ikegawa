@@ -68,6 +68,13 @@ project (Mercado Livre):
 Python (pyserial) helper for poking at the instrument's raw protocol
 straight from the terminal, without compiling anything.
 
+## Download
+
+Pre-built binaries for Linux and Windows are attached to each
+**[release](https://github.com/Henriquegravina/ikegawa/releases/latest)** —
+no need to compile anything. macOS isn't pre-built (see [Building](#building)
+below for why).
+
 ## Running
 
 ```
