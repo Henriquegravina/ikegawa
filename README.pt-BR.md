@@ -2,6 +2,8 @@
 
 *[Read this in English](README.md)*
 
+### ⬇️ [**Baixar a última release**](https://github.com/Henriquegravina/ikegawa/releases/latest) (binários prontos para Linux e Windows, sem precisar compilar)
+
 GUI de leitura ao vivo e download de memória para multímetros Yokogawa
 TY710/TY720/TY530 via o adaptador de comunicação 92015 (protocolo
 documentado no manual Yokogawa `IM92015-02E`).
@@ -65,13 +67,6 @@ projeto (Mercado Livre):
 `dev-tools/ty_read.py` não é usado pelo app — é só uma ferramenta auxiliar em
 Python (pyserial) para bisbilhotar o protocolo bruto do instrumento direto no
 terminal, sem precisar compilar nada.
-
-## Download
-
-Binários prontos para Linux e Windows ficam anexados em cada
-**[release](https://github.com/Henriquegravina/ikegawa/releases/latest)** —
-não precisa compilar nada. macOS não tem binário pronto (veja
-[Compilando](#compilando) mais abaixo pra entender o motivo).
 
 ## Rodando
 

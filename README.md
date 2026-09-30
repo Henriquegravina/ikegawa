@@ -2,6 +2,8 @@
 
 *[Leia isto em português](README.pt-BR.md)*
 
+### ⬇️ [**Download the latest release**](https://github.com/Henriquegravina/ikegawa/releases/latest) (Linux and Windows binaries, no compiling needed)
+
 A live-reading and memory-download GUI for Yokogawa TY710/TY720/TY530
 digital multimeters via the 92015 communication adapter (protocol
 documented in the Yokogawa manual `IM92015-02E`).
@@ -67,13 +69,6 @@ project (Mercado Livre):
 `dev-tools/ty_read.py` isn't used by the app itself — it's just a small
 Python (pyserial) helper for poking at the instrument's raw protocol
 straight from the terminal, without compiling anything.
-
-## Download
-
-Pre-built binaries for Linux and Windows are attached to each
-**[release](https://github.com/Henriquegravina/ikegawa/releases/latest)** —
-no need to compile anything. macOS isn't pre-built (see [Building](#building)
-below for why).
 
 ## Running
 
