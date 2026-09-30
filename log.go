@@ -24,7 +24,9 @@ type localLogger struct {
 	path   string
 }
 
-func logDir() (string, error) {
+// defaultLogDir returns the log folder to use when the user hasn't picked
+// one of their own in Settings.
+func defaultLogDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
 		base, err = os.UserHomeDir()
@@ -35,15 +37,30 @@ func logDir() (string, error) {
 	return filepath.Join(base, "IkeGawa", "logs"), nil
 }
 
-func newLocalLogger() (*localLogger, error) {
-	dir, err := logDir()
-	if err != nil {
-		return nil, err
-	}
+func newLocalLogger(dir string) (*localLogger, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
 	return &localLogger{dir: dir}, nil
+}
+
+// SetDir changes the folder new sessions are written into (existing open
+// files aren't moved). The folder is created if it doesn't exist yet.
+func (l *localLogger) SetDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.dir = dir
+	return nil
+}
+
+// Dir returns the folder new sessions are currently written into.
+func (l *localLogger) Dir() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.dir
 }
 
 // StartSession closes any file from a previous session and opens a new one

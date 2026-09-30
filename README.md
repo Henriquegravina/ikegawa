@@ -20,9 +20,10 @@ A própria interface tem um seletor de idioma (Português/English) embutido.
   sem travar e sem precisar reconectar a porta.
 - **Log local opcional**: checkbox "Gravar log local (CSV)" — quando
   ativado, grava cada leitura ao vivo num arquivo próprio
-  (`ikegawa_AAAA-MM-DD_HH-MM-SS.csv`, um por sessão de gravação) em
-  `~/.config/IkeGawa/logs/` (ou equivalente no SO). Fica desligado por
-  padrão; isso é independente da memória interna do instrumento.
+  (`ikegawa_AAAA-MM-DD_HH-MM-SS.csv`, um por sessão de gravação) na pasta de
+  logs configurada (por padrão `~/.config/IkeGawa/logs/` ou equivalente no
+  SO). Fica desligado por padrão; isso é independente da memória interna do
+  instrumento.
 - **Modo PiP**: janela compacta (320×140, sem gráfico, sem abas, sem
   controles) mostrando só o valor atual — pensada para capturar como overlay
   numa live (janela separada, dá pra recortar no OBS/etc como fonte).
@@ -31,6 +32,9 @@ A própria interface tem um seletor de idioma (Português/English) embutido.
 - **Memória → Modo Logging**: consulta quantidade de registros e intervalo de
   amostragem, baixa todos os registros com barra de progresso/cancelamento, e
   exporta para CSV.
+- **Configurações**: trocar o idioma da interface e escolher a pasta onde o
+  log local é salvo (ou voltar ao padrão) — as duas escolhas ficam salvas
+  entre execuções.
 
 ## Estrutura do projeto
 
@@ -55,9 +59,55 @@ terminal, sem precisar compilar nada.
 build\ikegawa-windows-amd64.exe    # Windows
 ```
 
-No Linux, seu usuário provavelmente precisa estar no grupo `dialout` (ou a
-porta `/dev/ttyUSB0` precisa ter permissão de leitura/escrita) para acessar a
-porta serial sem root.
+## Configurando o adaptador FTDI no Linux
+
+O cabo/adaptador 92015 usa um chip FTDI e aparece como uma porta serial
+comum (`/dev/ttyUSB0`, `/dev/ttyUSB1`, etc). Normalmente funciona plug-and-
+-play, mas alguns pontos ajudam a diagnosticar problemas:
+
+1. **Confirme que foi reconhecido**: `lsusb` deve listar o adaptador (ele
+   pode aparecer como "FTDI" ou, no caso do cabo da Yokogawa, como
+   "KYORITSU MODEL 92015" — mesmo VID:PID `12ec:2015`, é o mesmo cabo
+   fabricado sob encomenda). O driver `ftdi_sio` já vem no kernel de
+   qualquer distro recente e carrega sozinho; confirme com:
+   ```
+   journalctl -k | grep -i ftdi
+   ```
+   Deve aparecer algo como `FTDI USB Serial Device converter now attached
+   to ttyUSB0`.
+
+2. **Permissão de acesso**: por padrão, `/dev/ttyUSB0` pertence ao grupo
+   `dialout`. Adicione seu usuário a esse grupo e faça logout/login (ou
+   `newgrp dialout` numa sessão de teste) para não precisar rodar como
+   root:
+   ```
+   sudo usermod -aG dialout $USER
+   ```
+
+3. **O dispositivo some ou é "roubado" logo após conectar**: o culpado
+   costuma ser o `brltty`, um daemon de acessibilidade (leitor Braille) que
+   tenta se conectar automaticamente a qualquer adaptador serial novo,
+   inclusive os FTDI. Se você não usa um leitor Braille, desative-o:
+   ```
+   sudo systemctl stop brltty brltty-udev.service
+   sudo systemctl mask brltty brltty-udev.service
+   ```
+
+4. **(Opcional) Nome de dispositivo fixo**: se você tem mais de um
+   adaptador USB-serial e a porta muda de `ttyUSB0` para `ttyUSB1` etc.
+   dependendo da ordem em que são conectados, crie uma regra udev fixando
+   um symlink baseado no número de série do adaptador (descubra o serial
+   com `udevadm info -a -n /dev/ttyUSB0 | grep serial`):
+   ```
+   # /etc/udev/rules.d/99-ikegawa.rules
+   SUBSYSTEM=="tty", ATTRS{idVendor}=="12ec", ATTRS{idProduct}=="2015", ATTRS{serial}=="SEU_NUMERO_DE_SERIE", SYMLINK+="ikegawa"
+   ```
+   Depois de salvar:
+   ```
+   sudo udevadm control --reload-rules && sudo udevadm trigger
+   ```
+   O dispositivo passa a aparecer também em `/dev/ikegawa`, além do
+   `/dev/ttyUSBx` de sempre.
 
 ## Compilando
 

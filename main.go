@@ -43,9 +43,18 @@ type App struct {
 	lang       Lang
 	langSelect *widget.Select
 
-	tabs          *container.AppTabs
-	liveTabItem   *container.TabItem
-	memoryTabItem *container.TabItem
+	tabs            *container.AppTabs
+	liveTabItem     *container.TabItem
+	memoryTabItem   *container.TabItem
+	settingsTabItem *container.TabItem
+
+	// settings tab widgets
+	settingsHeaderLabel *widget.Label
+	langLabel           *widget.Label
+	logFolderLabel      *widget.Label
+	logFolderPathLabel  *widget.Label
+	chooseFolderBtn     *widget.Button
+	defaultFolderBtn    *widget.Button
 
 	// live tab widgets
 	portLabel   *widget.Label
@@ -100,15 +109,29 @@ func main() {
 
 	tv := &App{fyneApp: a, win: w, lang: LangPT}
 
-	if logger, err := newLocalLogger(); err != nil {
-		fmt.Println("warning: local log disabled:", err)
-	} else {
-		tv.logger = logger
+	prefs := a.Preferences()
+	if prefs.String(prefKeyLang) == "en" {
+		tv.lang = LangEN
+	}
+
+	logDir := prefs.String(prefKeyLogDir)
+	if logDir == "" {
+		if d, err := defaultLogDir(); err == nil {
+			logDir = d
+		}
+	}
+	if logDir != "" {
+		if logger, err := newLocalLogger(logDir); err != nil {
+			fmt.Println("warning: local log disabled:", err)
+		} else {
+			tv.logger = logger
+		}
 	}
 
 	tv.liveTabItem = container.NewTabItem(tv.tr().TabLive, tv.buildLiveTab())
 	tv.memoryTabItem = container.NewTabItem(tv.tr().TabMemory, tv.buildMemoryTab())
-	tv.tabs = container.NewAppTabs(tv.liveTabItem, tv.memoryTabItem)
+	tv.settingsTabItem = container.NewTabItem(tv.tr().TabSettings, tv.buildSettingsTab())
+	tv.tabs = container.NewAppTabs(tv.liveTabItem, tv.memoryTabItem, tv.settingsTabItem)
 
 	w.SetContent(tv.tabs)
 	w.SetOnClosed(func() {
@@ -122,19 +145,6 @@ func main() {
 }
 
 func (a *App) buildLiveTab() fyne.CanvasObject {
-	// No OnChanged yet: SetSelected below would fire it immediately, before
-	// the rest of the UI (tabs, memory widgets) exists to retranslate.
-	a.langSelect = widget.NewSelect([]string{"Português", "English"}, nil)
-	a.langSelect.SetSelected("Português")
-	a.langSelect.OnChanged = func(s string) {
-		if s == "English" {
-			a.lang = LangEN
-		} else {
-			a.lang = LangPT
-		}
-		a.retranslateUI()
-	}
-
 	a.portLabel = widget.NewLabel(a.tr().PortLabel)
 	a.portSelect = widget.NewSelect(nil, nil)
 	a.refreshPorts()
@@ -195,7 +205,7 @@ func (a *App) buildLiveTab() fyne.CanvasObject {
 	a.updateLogPathText()
 
 	top := container.NewBorder(nil, nil,
-		a.portLabel, container.NewHBox(a.refreshBtn, a.connectBtn, widget.NewLabel(""), a.langSelect),
+		a.portLabel, container.NewHBox(a.refreshBtn, a.connectBtn),
 		a.portSelect,
 	)
 
@@ -222,6 +232,7 @@ func (a *App) retranslateUI() {
 
 	a.liveTabItem.Text = t.TabLive
 	a.memoryTabItem.Text = t.TabMemory
+	a.settingsTabItem.Text = t.TabSettings
 	a.tabs.Refresh()
 
 	a.portLabel.SetText(t.PortLabel)
@@ -240,6 +251,7 @@ func (a *App) retranslateUI() {
 	a.updateLogPathText()
 
 	a.retranslateMemoryTab()
+	a.retranslateSettingsTab()
 }
 
 func (a *App) connectButtonText() string {

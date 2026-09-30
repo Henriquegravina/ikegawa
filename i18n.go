@@ -37,7 +37,10 @@ type i18nStrings struct {
 	LocalLogWriteError  string // %s = error
 	LocalLogCreateError string // %s = error
 
-	TabLive, TabMemory, TabSave, TabLogging string
+	TabLive, TabMemory, TabSave, TabLogging, TabSettings string
+
+	SettingsHeader, LogFolderLabel, ChooseFolder, UseDefaultFolder string
+	LogFolderChangeError                                           string // %s = error
 
 	SaveModeHeader, SlotLabel, ReadSlot, DownloadAllSave, Cancel string
 	ColSlot, ColValue, ColStatus, Empty                          string
@@ -83,7 +86,13 @@ var ptStrings = i18nStrings{
 	LocalLogWriteError:  "Erro gravando log local: %s",
 	LocalLogCreateError: "não foi possível criar o arquivo de log: %s",
 
-	TabLive: "Ao Vivo", TabMemory: "Memória", TabSave: "Modo Save", TabLogging: "Modo Logging",
+	TabLive: "Ao Vivo", TabMemory: "Memória", TabSave: "Modo Save", TabLogging: "Modo Logging", TabSettings: "Configurações",
+
+	SettingsHeader:       "Configurações",
+	LogFolderLabel:       "Pasta dos logs:",
+	ChooseFolder:         "Escolher pasta...",
+	UseDefaultFolder:     "Usar padrão",
+	LogFolderChangeError: "não foi possível usar essa pasta: %s",
 
 	SaveModeHeader:     "Memória modo Save (RS) — 100 posições",
 	SlotLabel:          "Slot:",
@@ -140,7 +149,13 @@ var enStrings = i18nStrings{
 	LocalLogWriteError:  "Error writing local log: %s",
 	LocalLogCreateError: "could not create log file: %s",
 
-	TabLive: "Live", TabMemory: "Memory", TabSave: "Save mode", TabLogging: "Logging mode",
+	TabLive: "Live", TabMemory: "Memory", TabSave: "Save mode", TabLogging: "Logging mode", TabSettings: "Settings",
+
+	SettingsHeader:       "Settings",
+	LogFolderLabel:       "Log folder:",
+	ChooseFolder:         "Choose folder...",
+	UseDefaultFolder:     "Use default",
+	LogFolderChangeError: "could not use that folder: %s",
 
 	SaveModeHeader:     "Save-mode memory (RS) — 100 slots",
 	SlotLabel:          "Slot:",
