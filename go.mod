@@ -1,4 +1,4 @@
-module github.com/henrique-gravina/ikegawa
+module github.com/Henriquegravina/ikegawa
 
 go 1.22.0
 

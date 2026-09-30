@@ -18,7 +18,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"go.bug.st/serial"
 
-	"github.com/henrique-gravina/ikegawa/internal/typroto"
+	"github.com/Henriquegravina/ikegawa/internal/typroto"
 )
 
 type historyEntry struct {

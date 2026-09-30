@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/henrique-gravina/ikegawa/internal/typroto"
+	"github.com/Henriquegravina/ikegawa/internal/typroto"
 )
 
 // localLogger appends live readings to a local CSV file, independent of the
