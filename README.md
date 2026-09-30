@@ -11,6 +11,18 @@ The interface itself has a language switcher (Português/English) built in.
 
 ![IkeGawa's Live tab showing a live DC voltage reading, chart and rate counter](docs/screenshot.png)
 
+## Where to buy the TY720
+
+<img src="docs/ty720.webp" alt="Yokogawa TY720 digital multimeter" width="220" align="right">
+
+Don't have the multimeter yet? These are the listings used to test this
+project (Mercado Livre):
+
+- **[Yokogawa TY720](https://meli.la/24VfL6v)**
+- **[Yokogawa TY720 with accessories bundle](https://meli.la/12um94c)**
+
+<br clear="right">
+
 ## Features
 
 - **Live**: pick the serial port, connect, and it starts reading right away

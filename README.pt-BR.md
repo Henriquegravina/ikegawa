@@ -11,6 +11,18 @@ A própria interface tem um seletor de idioma (Português/English) embutido.
 
 ![Aba Ao Vivo do IkeGawa mostrando uma leitura de tensão DC ao vivo, com gráfico e contador de taxa](docs/screenshot.png)
 
+## Onde comprar o TY720
+
+<img src="docs/ty720.webp" alt="Multímetro digital Yokogawa TY720" width="220" align="right">
+
+Ainda não tem o multímetro? Esses são os anúncios usados para testar este
+projeto (Mercado Livre):
+
+- **[Yokogawa TY720](https://meli.la/24VfL6v)**
+- **[Yokogawa TY720 com kit de acessórios](https://meli.la/12um94c)**
+
+<br clear="right">
+
 ## Funcionalidades
 
 - **Ao Vivo**: seleciona a porta serial, conecta e já começa a ler sozinho
