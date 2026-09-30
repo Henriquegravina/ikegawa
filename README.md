@@ -1,148 +1,154 @@
 # IkeGawa
 
-*[Read this in English](README.en.md)*
+*[Leia isto em português](README.pt-BR.md)*
 
-GUI de leitura ao vivo e download de memória para multímetros Yokogawa
-TY710/TY720/TY530 via o adaptador de comunicação 92015 (protocolo
-documentado no manual Yokogawa `IM92015-02E`).
+A live-reading and memory-download GUI for Yokogawa TY710/TY720/TY530
+digital multimeters via the 92015 communication adapter (protocol
+documented in the Yokogawa manual `IM92015-02E`).
 
-Escrito em Go + [Fyne](https://fyne.io). Funciona em Linux, Windows e macOS.
-A própria interface tem um seletor de idioma (Português/English) embutido.
+Written in Go + [Fyne](https://fyne.io). Runs on Linux, Windows and macOS.
+The interface itself has a language switcher (Português/English) built in.
 
-![Aba Ao Vivo do IkeGawa mostrando uma leitura de tensão DC ao vivo, com gráfico e contador de taxa](docs/screenshot.png)
+![IkeGawa's Live tab showing a live DC voltage reading, chart and rate counter](docs/screenshot.png)
 
-## Funcionalidades
+## Features
 
-- **Ao Vivo**: seleciona a porta serial, conecta e já começa a ler sozinho
-  (não precisa apertar nada), mostra a leitura atual em destaque com cor por
-  status (normal/over-range/bateria fraca), contador de leituras/s e /min,
-  gráfico ao vivo dos últimos 200 pontos, e exportação do histórico para CSV.
-  Se o instrumento parar de responder (ex.: foi desligado), o app detecta em
-  poucos segundos, avisa na tela e volta a ler sozinho assim que ele voltar —
-  sem travar e sem precisar reconectar a porta.
-- **Log local opcional**: checkbox "Gravar log local (CSV)" — quando
-  ativado, grava cada leitura ao vivo num arquivo próprio
-  (`ikegawa_AAAA-MM-DD_HH-MM-SS.csv`, um por sessão de gravação) na pasta de
-  logs configurada (por padrão `~/.config/IkeGawa/logs/` ou equivalente no
-  SO). Fica desligado por padrão; isso é independente da memória interna do
-  instrumento.
-- **Modo PiP**: janela compacta (320×140, sem gráfico, sem abas, sem
-  controles) mostrando só o valor atual — pensada para capturar como overlay
-  numa live (janela separada, dá pra recortar no OBS/etc como fonte).
-- **Memória → Modo Save**: lê um slot específico (0-99) ou baixa todos os 100
-  de uma vez, com barra de progresso e exportação CSV.
-- **Memória → Modo Logging**: consulta quantidade de registros e intervalo de
-  amostragem, baixa todos os registros com barra de progresso/cancelamento, e
-  exporta para CSV.
-- **Configurações**: trocar o idioma da interface e escolher a pasta onde o
-  log local é salvo (ou voltar ao padrão) — as duas escolhas ficam salvas
-  entre execuções.
+- **Live**: pick the serial port, connect, and it starts reading right away
+  (nothing else to click), shows the current reading front and center with
+  a color per status (normal/over-range/low battery), a readings/s and
+  /min counter, a live chart of the last 200 points, and CSV export of the
+  session's history. If the instrument stops responding (e.g. it was
+  powered off), the app notices within a few seconds, says so on screen,
+  and resumes reading on its own once it's back — no freeze, no need to
+  reconnect the port.
+- **Optional local log**: a "Record local log (CSV)" checkbox — when
+  turned on, every live reading is appended to its own file
+  (`ikegawa_YYYY-MM-DD_HH-MM-SS.csv`, one per recording session) under the
+  configured log folder (by default `~/.config/IkeGawa/logs/` or the OS
+  equivalent). Off by default; this is independent of the instrument's own
+  internal memory.
+- **PiP mode**: a compact window (320×140, no chart, no tabs, no controls)
+  showing just the current value — meant to be captured as an overlay in a
+  livestream (it's a separate window, so you can crop it as a source in
+  OBS/etc).
+- **Memory → Save mode**: read one specific slot (0-99) or download all 100
+  at once, with a progress bar and CSV export.
+- **Memory → Logging mode**: query the record count and sampling interval,
+  download all records with a progress bar/cancel button, and export to
+  CSV.
+- **Settings**: switch the interface language and pick where the local log
+  is saved (or reset it to the default) — both choices persist across
+  restarts.
 
-## Estrutura do projeto
+## Project layout
 
 ```
 .
-├── main.go, chart.go, csv.go, log.go, memory.go, i18n.go   # app Fyne (pacote main)
-├── internal/typroto/                               # protocolo do 92015
-├── build/                                           # Dockerfiles + binários compilados (git-ignorados)
-├── build.sh, build-linux.sh, build-windows.sh       # build via Docker, sem precisar de Go/gcc local
+├── main.go, chart.go, csv.go, log.go, memory.go, i18n.go   # the Fyne app (package main)
+├── internal/typroto/                                        # 92015 protocol implementation
+├── build/                                                    # Dockerfiles + compiled binaries (git-ignored)
+├── build.sh, build-linux.sh, build-windows.sh                # Docker-based builds, no local Go/gcc needed
 └── dev-tools/
-    └── ty_read.py                                   # script standalone usado para prototipar/depurar o protocolo
+    └── ty_read.py                                            # standalone script used to prototype/debug the protocol
 ```
 
-`dev-tools/ty_read.py` não é usado pelo app — é só uma ferramenta auxiliar em
-Python (pyserial) para bisbilhotar o protocolo bruto do instrumento direto no
-terminal, sem precisar compilar nada.
+`dev-tools/ty_read.py` isn't used by the app itself — it's just a small
+Python (pyserial) helper for poking at the instrument's raw protocol
+straight from the terminal, without compiling anything.
 
-## Rodando
+## Running
 
 ```
 ./build/ikegawa-linux-amd64        # Linux
 build\ikegawa-windows-amd64.exe    # Windows
 ```
 
-## Configurando o adaptador FTDI no Linux
+## Setting up the FTDI adapter on Linux
 
-O cabo/adaptador 92015 usa um chip FTDI e aparece como uma porta serial
-comum (`/dev/ttyUSB0`, `/dev/ttyUSB1`, etc). Normalmente funciona plug-and-
--play, mas alguns pontos ajudam a diagnosticar problemas:
+The 92015 cable/adapter uses an FTDI chip and shows up as a regular serial
+port (`/dev/ttyUSB0`, `/dev/ttyUSB1`, etc). It's usually plug-and-play, but
+a few things help when troubleshooting:
 
-1. **Confirme que foi reconhecido**: `lsusb` deve listar o adaptador (ele
-   pode aparecer como "FTDI" ou, no caso do cabo da Yokogawa, como
-   "KYORITSU MODEL 92015" — mesmo VID:PID `12ec:2015`, é o mesmo cabo
-   fabricado sob encomenda). O driver `ftdi_sio` já vem no kernel de
-   qualquer distro recente e carrega sozinho; confirme com:
+1. **Confirm it's recognized**: `lsusb` should list the adapter (it may
+   show up as "FTDI", or, on the Yokogawa cable specifically, as
+   "KYORITSU MODEL 92015" — same VID:PID `12ec:2015`, it's the same cable
+   built under contract). The `ftdi_sio` driver ships in the kernel of any
+   recent distro and loads on its own; confirm with:
    ```
    journalctl -k | grep -i ftdi
    ```
-   Deve aparecer algo como `FTDI USB Serial Device converter now attached
-   to ttyUSB0`.
+   You should see something like `FTDI USB Serial Device converter now
+   attached to ttyUSB0`.
 
-2. **Permissão de acesso**: por padrão, `/dev/ttyUSB0` pertence ao grupo
-   `dialout`. Adicione seu usuário a esse grupo e faça logout/login (ou
-   `newgrp dialout` numa sessão de teste) para não precisar rodar como
-   root:
+2. **Access permission**: by default, `/dev/ttyUSB0` belongs to the
+   `dialout` group. Add your user to it and log out/in (or `newgrp
+   dialout` in a test session) so you don't need root:
    ```
    sudo usermod -aG dialout $USER
    ```
 
-3. **O dispositivo some ou é "roubado" logo após conectar**: o culpado
-   costuma ser o `brltty`, um daemon de acessibilidade (leitor Braille) que
-   tenta se conectar automaticamente a qualquer adaptador serial novo,
-   inclusive os FTDI. Se você não usa um leitor Braille, desative-o:
+3. **The device disappears or gets "stolen" right after plugging in**: the
+   usual culprit is `brltty`, an accessibility daemon (Braille display
+   driver) that tries to auto-connect to any new serial adapter, FTDI ones
+   included. If you don't use a Braille display, disable it:
    ```
    sudo systemctl stop brltty brltty-udev.service
    sudo systemctl mask brltty brltty-udev.service
    ```
 
-4. **(Opcional) Nome de dispositivo fixo**: se você tem mais de um
-   adaptador USB-serial e a porta muda de `ttyUSB0` para `ttyUSB1` etc.
-   dependendo da ordem em que são conectados, crie uma regra udev fixando
-   um symlink baseado no número de série do adaptador (descubra o serial
-   com `udevadm info -a -n /dev/ttyUSB0 | grep serial`):
+4. **(Optional) A stable device name**: if you have more than one
+   USB-serial adapter and the port shifts between `ttyUSB0`/`ttyUSB1`/etc.
+   depending on plug-in order, add a udev rule pinning a symlink based on
+   the adapter's serial number (find it with `udevadm info -a -n
+   /dev/ttyUSB0 | grep serial`):
    ```
    # /etc/udev/rules.d/99-ikegawa.rules
-   SUBSYSTEM=="tty", ATTRS{idVendor}=="12ec", ATTRS{idProduct}=="2015", ATTRS{serial}=="SEU_NUMERO_DE_SERIE", SYMLINK+="ikegawa"
+   SUBSYSTEM=="tty", ATTRS{idVendor}=="12ec", ATTRS{idProduct}=="2015", ATTRS{serial}=="YOUR_SERIAL_NUMBER", SYMLINK+="ikegawa"
    ```
-   Depois de salvar:
+   Then reload:
    ```
    sudo udevadm control --reload-rules && sudo udevadm trigger
    ```
-   O dispositivo passa a aparecer também em `/dev/ikegawa`, além do
-   `/dev/ttyUSBx` de sempre.
+   The device will also show up at `/dev/ikegawa`, alongside the usual
+   `/dev/ttyUSBx`.
 
-## Compilando
+## Building
 
-Não é necessário ter Go nem gcc instalados — tudo roda em containers Docker:
+You don't need Go or gcc installed — everything runs inside Docker
+containers:
 
 ```
-./build-linux.sh      # só Linux
-./build-windows.sh    # só Windows (cross-compile via MinGW)
-./build.sh            # os dois
+./build-linux.sh      # Linux only
+./build-windows.sh    # Windows only (cross-compiled via MinGW)
+./build.sh            # both
 ```
 
-Isso gera `build/ikegawa-linux-amd64` e/ou `build/ikegawa-windows-amd64.exe`.
+This produces `build/ikegawa-linux-amd64` and/or
+`build/ikegawa-windows-amd64.exe`.
 
 ### macOS
 
-Cross-compilar para macOS a partir do Linux exige o SDK da Apple (osxcross),
-que não pode ser redistribuído por licença — teria que ser extraído a partir
-de uma instalação real do Xcode, ironicamente só possível já tendo um Mac.
+Cross-compiling for macOS from Linux requires Apple's SDK (osxcross),
+which can't be redistributed under its license — it would have to be
+extracted from a real Xcode install, which ironically requires already
+having a Mac.
 
-Em compensação, compilar *nativamente* num Mac é trivial, já que lá o cgo usa
-o clang que já vem com as Ferramentas de Linha de Comando do Xcode:
+Building *natively* on a Mac, on the other hand, is trivial, since cgo
+there uses the clang that ships with the Xcode Command Line Tools:
 
 ```
-xcode-select --install        # se ainda não tiver
-brew install go               # ou baixe em go.dev/dl
+xcode-select --install        # if you don't have it yet
+brew install go               # or download from go.dev/dl
 go build -o build/ikegawa-macos .
 ```
 
-(Opcional: `go install fyne.io/tools/cmd/fyne@latest && fyne package -os darwin`
-gera um `.app` com ícone e Info.plist em vez de um binário solto.)
+(Optional: `go install fyne.io/tools/cmd/fyne@latest && fyne package -os darwin`
+produces a proper `.app` with an icon and Info.plist instead of a bare
+binary.)
 
-## Protocolo
+## Protocol
 
-Ver `internal/typroto/typroto.go` — implementação comentada com a referência
-ao manual `IM92015-02E`. Configuração serial fixa pelo instrumento: 9600 bps,
-8 bits, sem paridade, **2 stop bits**, sem handshake, delimitador `<CR><LF>`.
+See `internal/typroto/typroto.go` — a commented implementation with
+references to the `IM92015-02E` manual. Serial settings are fixed by the
+instrument: 9600 bps, 8 data bits, no parity, **2 stop bits**, no
+handshake, `<CR><LF>` delimiter.
