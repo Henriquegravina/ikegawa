@@ -1,10 +1,13 @@
 # IkeGawa
 
+*[Read this in English](README.en.md)*
+
 GUI de leitura ao vivo e download de memória para multímetros Yokogawa
 TY710/TY720/TY530 via o adaptador de comunicação 92015 (protocolo
 documentado no manual Yokogawa `IM92015-02E`).
 
 Escrito em Go + [Fyne](https://fyne.io). Funciona em Linux, Windows e macOS.
+A própria interface tem um seletor de idioma (Português/English) embutido.
 
 ## Funcionalidades
 
@@ -33,7 +36,7 @@ Escrito em Go + [Fyne](https://fyne.io). Funciona em Linux, Windows e macOS.
 
 ```
 .
-├── main.go, chart.go, csv.go, log.go, memory.go   # app Fyne (pacote main)
+├── main.go, chart.go, csv.go, log.go, memory.go, i18n.go   # app Fyne (pacote main)
 ├── internal/typroto/                               # protocolo do 92015
 ├── build/                                           # Dockerfiles + binários compilados (git-ignorados)
 ├── build.sh, build-linux.sh, build-windows.sh       # build via Docker, sem precisar de Go/gcc local

@@ -16,7 +16,7 @@ docker run --rm \
   -e CC=x86_64-w64-mingw32-gcc \
   -e CGO_LDFLAGS="-static-libgcc -static-libstdc++" \
   ikegawa-windows-builder \
-  sh -c "go build -ldflags='-H=windowsgui' -o build/ikegawa-windows-amd64.exe ."
+  sh -c "go build -buildvcs=false -ldflags='-H=windowsgui' -o build/ikegawa-windows-amd64.exe ."
 
 echo "==> Fixing file ownership (container runs as root)"
 docker run --rm -v "$(pwd)":/src alpine chown -R "$(id -u):$(id -g)" /src/build /src/go.mod /src/go.sum

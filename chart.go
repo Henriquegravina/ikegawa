@@ -164,7 +164,7 @@ func (r *chartRenderer) Layout(size fyne.Size) {
 	r.raster.Resize(size)
 }
 
-func (r *chartRenderer) MinSize() fyne.Size          { return fyne.NewSize(200, 100) }
-func (r *chartRenderer) Refresh()                    { canvas.Refresh(r.raster) }
+func (r *chartRenderer) MinSize() fyne.Size           { return fyne.NewSize(200, 100) }
+func (r *chartRenderer) Refresh()                     { canvas.Refresh(r.raster) }
 func (r *chartRenderer) Objects() []fyne.CanvasObject { return r.objects }
 func (r *chartRenderer) Destroy()                     {}

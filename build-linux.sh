@@ -12,7 +12,7 @@ docker run --rm \
   -v ikegawa-gomodcache:/go/pkg/mod \
   -w /src \
   ikegawa-linux-builder \
-  sh -c "go build -o build/ikegawa-linux-amd64 ."
+  sh -c "go build -buildvcs=false -o build/ikegawa-linux-amd64 ."
 
 echo "==> Fixing file ownership (container runs as root)"
 docker run --rm -v "$(pwd)":/src alpine chown -R "$(id -u):$(id -g)" /src/build /src/go.mod /src/go.sum

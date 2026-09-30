@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"sync"
@@ -37,7 +38,17 @@ type App struct {
 
 	history []historyEntry
 
+	// UI language; see i18n.go. Everything below that shows text keeps a
+	// widget reference here so retranslateUI can update it in place.
+	lang       Lang
+	langSelect *widget.Select
+
+	tabs          *container.AppTabs
+	liveTabItem   *container.TabItem
+	memoryTabItem *container.TabItem
+
 	// live tab widgets
+	portLabel   *widget.Label
 	portSelect  *widget.Select
 	refreshBtn  *widget.Button
 	connectBtn  *widget.Button
@@ -52,6 +63,18 @@ type App struct {
 	memSaveSection *memSection
 	memLogSection  *memSection
 
+	// memory tab widgets that need retranslating on language change
+	memTabs            *container.AppTabs
+	saveTabItem        *container.TabItem
+	loggingTabItem     *container.TabItem
+	saveHeaderLabel    *widget.Label
+	loggingHeaderLabel *widget.Label
+	slotLabel          *widget.Label
+	slotEntry          *widget.Entry
+	readSlotBtn        *widget.Button
+	queryBtn           *widget.Button
+	queryLabel         *widget.Label
+
 	// PiP (picture-in-picture) window: a small chrome-less window showing
 	// only the current value, meant to be captured as an overlay in a live
 	// stream.
@@ -60,8 +83,8 @@ type App struct {
 	pipValueText *canvas.Text
 
 	// logger appends live readings to a local CSV file (see log.go),
-	// independent of the instrument's own memory (that's the Memória tab).
-	// Off by default — only writes while the user turns it on.
+	// independent of the instrument's own memory (that's the Memória/Memory
+	// tab). Off by default — only writes while the user turns it on.
 	logger         *localLogger
 	loggingEnabled atomic.Bool
 	logCheck       *widget.Check
@@ -75,20 +98,19 @@ func main() {
 	w := a.NewWindow(appName)
 	w.Resize(fyne.NewSize(780, 560))
 
-	tv := &App{fyneApp: a, win: w}
+	tv := &App{fyneApp: a, win: w, lang: LangPT}
 
 	if logger, err := newLocalLogger(); err != nil {
-		fmt.Println("aviso: log local desabilitado:", err)
+		fmt.Println("warning: local log disabled:", err)
 	} else {
 		tv.logger = logger
 	}
 
-	tabs := container.NewAppTabs(
-		container.NewTabItem("Ao Vivo", tv.buildLiveTab()),
-		container.NewTabItem("Memória", tv.buildMemoryTab()),
-	)
+	tv.liveTabItem = container.NewTabItem(tv.tr().TabLive, tv.buildLiveTab())
+	tv.memoryTabItem = container.NewTabItem(tv.tr().TabMemory, tv.buildMemoryTab())
+	tv.tabs = container.NewAppTabs(tv.liveTabItem, tv.memoryTabItem)
 
-	w.SetContent(tabs)
+	w.SetContent(tv.tabs)
 	w.SetOnClosed(func() {
 		tv.disconnect()
 		tv.closePiP()
@@ -100,26 +122,40 @@ func main() {
 }
 
 func (a *App) buildLiveTab() fyne.CanvasObject {
+	// No OnChanged yet: SetSelected below would fire it immediately, before
+	// the rest of the UI (tabs, memory widgets) exists to retranslate.
+	a.langSelect = widget.NewSelect([]string{"Português", "English"}, nil)
+	a.langSelect.SetSelected("Português")
+	a.langSelect.OnChanged = func(s string) {
+		if s == "English" {
+			a.lang = LangEN
+		} else {
+			a.lang = LangPT
+		}
+		a.retranslateUI()
+	}
+
+	a.portLabel = widget.NewLabel(a.tr().PortLabel)
 	a.portSelect = widget.NewSelect(nil, nil)
 	a.refreshPorts()
 
-	a.refreshBtn = widget.NewButton("Atualizar portas", func() { a.refreshPorts() })
-	a.connectBtn = widget.NewButton("Conectar", func() { a.toggleConnect() })
+	a.refreshBtn = widget.NewButton(a.tr().RefreshPorts, func() { a.refreshPorts() })
+	a.connectBtn = widget.NewButton(a.tr().Connect, func() { a.toggleConnect() })
 
-	a.streamBtn = widget.NewButton("Iniciar leitura contínua", func() { a.toggleStream() })
+	a.streamBtn = widget.NewButton(a.tr().StartStream, func() { a.toggleStream() })
 	a.streamBtn.Disable()
-	a.singleBtn = widget.NewButton("Uma leitura", func() { a.singleReading() })
+	a.singleBtn = widget.NewButton(a.tr().SingleReading, func() { a.singleReading() })
 	a.singleBtn.Disable()
-	a.exportBtn = widget.NewButton("Exportar CSV", func() { a.exportHistory() })
+	a.exportBtn = widget.NewButton(a.tr().ExportCSV, func() { a.exportHistory() })
 	a.exportBtn.Disable()
-	a.pipBtn = widget.NewButton("Modo PiP", func() { a.togglePiP() })
+	a.pipBtn = widget.NewButton(a.tr().PiPMode, func() { a.togglePiP() })
 
 	a.valueText = canvas.NewText("--", color.RGBA{R: 220, G: 220, B: 220, A: 255})
 	a.valueText.TextSize = 56
 	a.valueText.Alignment = fyne.TextAlignCenter
 	a.valueText.TextStyle = fyne.TextStyle{Bold: true}
 
-	a.statusLabel = widget.NewLabel("Desconectado")
+	a.statusLabel = widget.NewLabel(a.tr().Disconnected)
 	a.statusLabel.Alignment = fyne.TextAlignCenter
 
 	a.rateLabel = widget.NewLabel("")
@@ -131,7 +167,7 @@ func (a *App) buildLiveTab() fyne.CanvasObject {
 	a.logPathText.Alignment = fyne.TextAlignCenter
 	a.logPathText.TextStyle = fyne.TextStyle{Italic: true}
 
-	a.logCheck = widget.NewCheck("Gravar log local (CSV)", func(checked bool) {
+	a.logCheck = widget.NewCheck(a.tr().RecordLocalLog, func(checked bool) {
 		if !checked {
 			a.loggingEnabled.Store(false)
 			if a.logger != nil {
@@ -142,12 +178,12 @@ func (a *App) buildLiveTab() fyne.CanvasObject {
 		}
 		if a.logger == nil {
 			a.logCheck.SetChecked(false)
-			a.showError(fmt.Errorf("log local indisponível"))
+			a.showError(errors.New(a.tr().LocalLogUnavailable))
 			return
 		}
 		if _, err := a.logger.StartSession(time.Now()); err != nil {
 			a.logCheck.SetChecked(false)
-			a.showError(fmt.Errorf("não foi possível criar o arquivo de log: %w", err))
+			a.showError(fmt.Errorf(a.tr().LocalLogCreateError, err))
 			return
 		}
 		a.loggingEnabled.Store(true)
@@ -159,7 +195,7 @@ func (a *App) buildLiveTab() fyne.CanvasObject {
 	a.updateLogPathText()
 
 	top := container.NewBorder(nil, nil,
-		widget.NewLabel("Porta:"), container.NewHBox(a.refreshBtn, a.connectBtn),
+		a.portLabel, container.NewHBox(a.refreshBtn, a.connectBtn, widget.NewLabel(""), a.langSelect),
 		a.portSelect,
 	)
 
@@ -175,6 +211,56 @@ func (a *App) buildLiveTab() fyne.CanvasObject {
 	center := container.NewBorder(valueBox, bottom, nil, nil, container.NewPadded(a.chart))
 
 	return container.NewBorder(top, nil, nil, nil, center)
+}
+
+// retranslateUI re-applies the current language to every static piece of
+// chrome (buttons, labels, tab titles). Transient status messages already
+// on screen are left as-is — they'll pick up the new language the next time
+// something updates them (e.g. the next reading, the next connect).
+func (a *App) retranslateUI() {
+	t := a.tr()
+
+	a.liveTabItem.Text = t.TabLive
+	a.memoryTabItem.Text = t.TabMemory
+	a.tabs.Refresh()
+
+	a.portLabel.SetText(t.PortLabel)
+	a.refreshBtn.SetText(t.RefreshPorts)
+	a.connectBtn.SetText(a.connectButtonText())
+	a.streamBtn.SetText(a.streamButtonText())
+	a.singleBtn.SetText(t.SingleReading)
+	a.exportBtn.SetText(t.ExportCSV)
+	a.pipBtn.SetText(a.pipButtonText())
+	a.logCheck.Text = t.RecordLocalLog
+	a.logCheck.Refresh()
+
+	if !a.connected {
+		a.statusLabel.SetText(t.Disconnected)
+	}
+	a.updateLogPathText()
+
+	a.retranslateMemoryTab()
+}
+
+func (a *App) connectButtonText() string {
+	if a.connected {
+		return a.tr().Disconnect
+	}
+	return a.tr().Connect
+}
+
+func (a *App) streamButtonText() string {
+	if a.streaming.Load() {
+		return a.tr().StopStream
+	}
+	return a.tr().StartStream
+}
+
+func (a *App) pipButtonText() string {
+	if a.pipWin != nil {
+		return a.tr().ClosePiPMode
+	}
+	return a.tr().PiPMode
 }
 
 func (a *App) refreshPorts() {
@@ -200,12 +286,12 @@ func (a *App) toggleConnect() {
 
 	portName := a.portSelect.Selected
 	if portName == "" {
-		a.showError(fmt.Errorf("selecione uma porta serial"))
+		a.showError(errors.New(a.tr().SelectPortError))
 		return
 	}
 	port, err := serial.Open(portName, typroto.Mode())
 	if err != nil {
-		a.showError(fmt.Errorf("não foi possível abrir %s: %w", portName, err))
+		a.showError(fmt.Errorf(a.tr().OpenPortError, portName, err))
 		return
 	}
 	client := typroto.NewClient(port)
@@ -215,11 +301,11 @@ func (a *App) toggleConnect() {
 	a.connected = true
 	a.mu.Unlock()
 
-	a.connectBtn.SetText("Desconectar")
+	a.connectBtn.SetText(a.tr().Disconnect)
 	a.portSelect.Disable()
 	a.refreshBtn.Disable()
 	a.streamBtn.Enable()
-	a.statusLabel.SetText("Conectado a " + portName)
+	a.statusLabel.SetText(fmt.Sprintf(a.tr().ConnectedTo, portName))
 	a.startStreaming() // start reading right away instead of waiting for a click
 }
 
@@ -236,14 +322,14 @@ func (a *App) disconnect() {
 		client.Close()
 	}
 
-	a.connectBtn.SetText("Conectar")
+	a.connectBtn.SetText(a.tr().Connect)
 	a.portSelect.Enable()
 	a.refreshBtn.Enable()
 	a.streamBtn.Disable()
-	a.streamBtn.SetText("Iniciar leitura contínua")
+	a.streamBtn.SetText(a.tr().StartStream)
 	a.singleBtn.Disable()
 	a.setMemoryEnabled(false)
-	a.statusLabel.SetText("Desconectado")
+	a.statusLabel.SetText(a.tr().Disconnected)
 	a.rateLabel.SetText("")
 }
 
@@ -273,7 +359,7 @@ func (a *App) singleReading() {
 func (a *App) toggleStream() {
 	if a.streaming.Load() {
 		a.stopStreamingLocked()
-		a.streamBtn.SetText("Iniciar leitura contínua")
+		a.streamBtn.SetText(a.tr().StartStream)
 		a.singleBtn.Enable()
 		a.setMemoryEnabled(true)
 		return
@@ -282,8 +368,7 @@ func (a *App) toggleStream() {
 }
 
 // startStreaming begins continuous live measurements. Called both from the
-// "Iniciar leitura contínua" button and automatically right after a
-// successful connect.
+// stream button and automatically right after a successful connect.
 func (a *App) startStreaming() {
 	client := a.currentClient()
 	if client == nil {
@@ -295,7 +380,7 @@ func (a *App) startStreaming() {
 	}
 	a.streaming.Store(true)
 	a.stopCh = make(chan struct{})
-	a.streamBtn.SetText("Parar leitura contínua")
+	a.streamBtn.SetText(a.tr().StopStream)
 	// The instrument can't interleave one-shot commands (RR,1, RS, RL, ...)
 	// with a running continuous stream (RR,2) — disable them while streaming.
 	a.singleBtn.Disable()
@@ -313,7 +398,7 @@ func (a *App) startStreaming() {
 			if err != nil {
 				switch err {
 				case typroto.ErrCancelled:
-					return // user pressed "Parar" / disconnected
+					return // user pressed "stop" / disconnected
 				case typroto.ErrNoResponse:
 					// Likely just the meter powered off, not the USB
 					// adapter unplugged — keep the session alive and keep
@@ -321,7 +406,7 @@ func (a *App) startStreaming() {
 					// its own state) so it recovers on its own once the
 					// meter is back on, no user action needed.
 					fyne.Do(func() {
-						a.statusLabel.SetText("Sem resposta do instrumento — tentando reconectar...")
+						a.statusLabel.SetText(a.tr().NoResponseReconnecting)
 					})
 					_ = client.StartStream()
 					continue
@@ -358,10 +443,10 @@ func (a *App) stopStreamingLocked() {
 // handleStreamLost reacts to the streaming goroutine giving up (instrument
 // powered off/disconnected, or a port error): stop cleanly and surface the
 // reason, without dropping the serial connection itself — the user may just
-// need to power the meter back on and press "Iniciar leitura contínua" again.
+// need to power the meter back on and press the start-stream button again.
 func (a *App) handleStreamLost(err error) {
 	a.stopStreamingLocked()
-	a.streamBtn.SetText("Iniciar leitura contínua")
+	a.streamBtn.SetText(a.tr().StartStream)
 	if a.currentClient() != nil {
 		a.singleBtn.Enable()
 		a.setMemoryEnabled(true)
@@ -377,7 +462,7 @@ func (a *App) showReading(r typroto.Reading) {
 	a.valueText.Text = text
 	a.valueText.Color = col
 	a.valueText.Refresh()
-	a.statusLabel.SetText(fmt.Sprintf("%s (%s)", r.Status, r.Function))
+	a.statusLabel.SetText(fmt.Sprintf("%s (%s)", a.trStatus(r.Status), r.Function))
 
 	if a.pipValueText != nil {
 		a.pipValueText.Text = text
@@ -394,11 +479,11 @@ func (a *App) showReading(r typroto.Reading) {
 	a.exportBtn.Enable()
 
 	perSec, perMin := a.currentRates(now)
-	a.rateLabel.SetText(fmt.Sprintf("%.1f leituras/s · %d/min", perSec, perMin))
+	a.rateLabel.SetText(fmt.Sprintf(a.tr().RateFormat, perSec, perMin))
 
 	if a.logger != nil && a.loggingEnabled.Load() {
 		if err := a.logger.Append(now, r); err != nil {
-			a.logPathText.SetText("Erro gravando log local: " + err.Error())
+			a.logPathText.SetText(fmt.Sprintf(a.tr().LocalLogWriteError, err.Error()))
 		} else {
 			a.updateLogPathText()
 		}
@@ -427,13 +512,14 @@ func (a *App) currentRates(now time.Time) (perSec float64, perMin int) {
 // updateLogPathText refreshes the footer text to reflect whether logging is
 // currently on, and where it's writing to.
 func (a *App) updateLogPathText() {
+	t := a.tr()
 	switch {
 	case a.logger == nil:
-		a.logPathText.SetText("Log local indisponível")
+		a.logPathText.SetText(t.LocalLogUnavailable)
 	case a.loggingEnabled.Load():
-		a.logPathText.SetText("Gravando em: " + a.logger.CurrentPath())
+		a.logPathText.SetText(fmt.Sprintf(t.RecordingAt, a.logger.CurrentPath()))
 	default:
-		a.logPathText.SetText("Gravação de log local desligada")
+		a.logPathText.SetText(t.LocalLogOff)
 	}
 }
 
@@ -462,11 +548,11 @@ func (a *App) openPiP() {
 	pip.SetOnClosed(func() {
 		a.pipWin = nil
 		a.pipValueText = nil
-		a.pipBtn.SetText("Modo PiP")
+		a.pipBtn.SetText(a.tr().PiPMode)
 	})
 
 	a.pipWin = pip
-	a.pipBtn.SetText("Fechar modo PiP")
+	a.pipBtn.SetText(a.tr().ClosePiPMode)
 	pip.Show()
 }
 
@@ -507,5 +593,9 @@ func (a *App) exportHistory() {
 }
 
 func (a *App) showError(err error) {
-	a.statusLabel.SetText("Erro: " + err.Error())
+	msg := err.Error()
+	if err == typroto.ErrNoResponse {
+		msg = a.tr().NoResponseError
+	}
+	a.statusLabel.SetText(fmt.Sprintf(a.tr().ErrorPrefix, msg))
 }
