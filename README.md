@@ -1,0 +1,93 @@
+# IkeGawa
+
+GUI de leitura ao vivo e download de memória para multímetros Yokogawa
+TY710/TY720/TY530 via o adaptador de comunicação 92015 (protocolo
+documentado no manual Yokogawa `IM92015-02E`).
+
+Escrito em Go + [Fyne](https://fyne.io). Funciona em Linux, Windows e macOS.
+
+## Funcionalidades
+
+- **Ao Vivo**: seleciona a porta serial, conecta e já começa a ler sozinho
+  (não precisa apertar nada), mostra a leitura atual em destaque com cor por
+  status (normal/over-range/bateria fraca), contador de leituras/s e /min,
+  gráfico ao vivo dos últimos 200 pontos, e exportação do histórico para CSV.
+  Se o instrumento parar de responder (ex.: foi desligado), o app detecta em
+  poucos segundos, avisa na tela e volta a ler sozinho assim que ele voltar —
+  sem travar e sem precisar reconectar a porta.
+- **Log local opcional**: checkbox "Gravar log local (CSV)" — quando
+  ativado, grava cada leitura ao vivo num arquivo próprio
+  (`ikegawa_AAAA-MM-DD_HH-MM-SS.csv`, um por sessão de gravação) em
+  `~/.config/IkeGawa/logs/` (ou equivalente no SO). Fica desligado por
+  padrão; isso é independente da memória interna do instrumento.
+- **Modo PiP**: janela compacta (320×140, sem gráfico, sem abas, sem
+  controles) mostrando só o valor atual — pensada para capturar como overlay
+  numa live (janela separada, dá pra recortar no OBS/etc como fonte).
+- **Memória → Modo Save**: lê um slot específico (0-99) ou baixa todos os 100
+  de uma vez, com barra de progresso e exportação CSV.
+- **Memória → Modo Logging**: consulta quantidade de registros e intervalo de
+  amostragem, baixa todos os registros com barra de progresso/cancelamento, e
+  exporta para CSV.
+
+## Estrutura do projeto
+
+```
+.
+├── main.go, chart.go, csv.go, log.go, memory.go   # app Fyne (pacote main)
+├── internal/typroto/                               # protocolo do 92015
+├── build/                                           # Dockerfiles + binários compilados (git-ignorados)
+├── build.sh, build-linux.sh, build-windows.sh       # build via Docker, sem precisar de Go/gcc local
+└── dev-tools/
+    └── ty_read.py                                   # script standalone usado para prototipar/depurar o protocolo
+```
+
+`dev-tools/ty_read.py` não é usado pelo app — é só uma ferramenta auxiliar em
+Python (pyserial) para bisbilhotar o protocolo bruto do instrumento direto no
+terminal, sem precisar compilar nada.
+
+## Rodando
+
+```
+./build/ikegawa-linux-amd64        # Linux
+build\ikegawa-windows-amd64.exe    # Windows
+```
+
+No Linux, seu usuário provavelmente precisa estar no grupo `dialout` (ou a
+porta `/dev/ttyUSB0` precisa ter permissão de leitura/escrita) para acessar a
+porta serial sem root.
+
+## Compilando
+
+Não é necessário ter Go nem gcc instalados — tudo roda em containers Docker:
+
+```
+./build-linux.sh      # só Linux
+./build-windows.sh    # só Windows (cross-compile via MinGW)
+./build.sh            # os dois
+```
+
+Isso gera `build/ikegawa-linux-amd64` e/ou `build/ikegawa-windows-amd64.exe`.
+
+### macOS
+
+Cross-compilar para macOS a partir do Linux exige o SDK da Apple (osxcross),
+que não pode ser redistribuído por licença — teria que ser extraído a partir
+de uma instalação real do Xcode, ironicamente só possível já tendo um Mac.
+
+Em compensação, compilar *nativamente* num Mac é trivial, já que lá o cgo usa
+o clang que já vem com as Ferramentas de Linha de Comando do Xcode:
+
+```
+xcode-select --install        # se ainda não tiver
+brew install go               # ou baixe em go.dev/dl
+go build -o build/ikegawa-macos .
+```
+
+(Opcional: `go install fyne.io/tools/cmd/fyne@latest && fyne package -os darwin`
+gera um `.app` com ícone e Info.plist em vez de um binário solto.)
+
+## Protocolo
+
+Ver `internal/typroto/typroto.go` — implementação comentada com a referência
+ao manual `IM92015-02E`. Configuração serial fixa pelo instrumento: 9600 bps,
+8 bits, sem paridade, **2 stop bits**, sem handshake, delimitador `<CR><LF>`.

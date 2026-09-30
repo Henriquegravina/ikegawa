@@ -1,0 +1,11 @@
+# Compiled binaries (built locally via build-linux.sh / build-windows.sh)
+/build/ikegawa-linux-amd64
+/build/ikegawa-windows-amd64.exe
+/build/ikegawa-macos
+
+# Go
+*.test
+*.out
+
+# OS cruft
+.DS_Store
